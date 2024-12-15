@@ -2,6 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Select a Project</title>
+</head>
+<body>
+    <h1>Select a Project</h1>
+    <form method="post" action="/process">
+        <label for="project_list">Project List:</label>
+        <select name="excel_file" id="project_list">
+            {% for file in excel_files %}
+            <option value="{{ file }}">{{ file }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dropdown Example</title>
 </head>
@@ -17,4 +38,4 @@
         <button type="submit">Submit</button>
     </form>
 </body>
-</html>
+</html> -->
