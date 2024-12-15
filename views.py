@@ -4,7 +4,7 @@ from matplotlib.figure import Figure
 from io import BytesIO
 import base64
 
-data = pd.read_excel("ProjectData.xlsx")
+data = pd.read_excel("Dataz\ProjectData1.xlsx")
 
 my_view = Blueprint(__name__,'my_view')
 
