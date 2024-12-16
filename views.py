@@ -5,6 +5,8 @@ from matplotlib.figure import Figure
 from io import BytesIO
 import base64
 
+from matplotlib.figure import Figure
+
 #data = pd.read_excel("Dataz\ProjectData1.xlsx")
 
 # Specify the directory containing the Excel files
@@ -24,16 +26,60 @@ def process():
     selected_file_name = request.form.get("excel_file")
 
     if selected_file_name:
-        # Append '.xlsx' to locate the file in the directory
         file_path = os.path.join(EXCEL_DIR, f"{selected_file_name}.xlsx")
 
         try:
             # Read the Excel file into a Pandas DataFrame
             df = pd.read_excel(file_path)
+
+            # Prepare data for Gantt chart
+            df["Days"] = (df["End date"] - df["Start date"]).dt.days
+
+            # Create a very compact Gantt chart
+            fig = Figure(figsize=(6, 3))  # Compact overall size
+            ax = fig.add_subplot(1, 1, 1)
+
+            # Reduce bar height further
+            bar_height = 0.3
+            y_positions = range(len(df) - 1, -1, -1)  # Reverse task order
+
+            # Plot horizontal bars
+            ax.barh(y=y_positions, left=df["Start date"], width=df["Days"], color="skyblue", height=bar_height)
+
+            # Set Y-axis labels
+            ax.set_yticks(y_positions)
+            ax.set_yticklabels(df["Project Task"], fontsize=8)  # Smaller font size for compactness
+
+            # Invert Y-axis and adjust the X-axis label
+            ax.invert_yaxis()
+            ax.set_xlabel("Timeline", fontsize=8)
+            ax.tick_params(axis="x", labelsize=8)  # Smaller ticks for X-axis
+
+            # Compact spacing around the figure
+            fig.subplots_adjust(top=0.95, bottom=0.2, left=0.3, right=0.95)  # Tight spacing
+
+            # Save the chart to a BytesIO buffer
+            buf = BytesIO()
+            fig.tight_layout()  # Prevent overlap
+            fig.savefig(buf, format="png", bbox_inches="tight")
+            buf.seek(0)
+
+            # Encode the PNG image to base64
+            chart_base64 = base64.b64encode(buf.read()).decode("utf-8")
+            buf.close()
+
+            # Generate table HTML
             table_html = df.to_html(classes="table table-striped table-bordered", index=False)
-            return render_template("view_excel.html", file_name=selected_file_name, table_html=table_html)
+
+            return render_template(
+                "view_excel.html",
+                file_name=selected_file_name,
+                table_html=table_html,
+                chart_base64=chart_base64
+            )
+
         except Exception as e:
-            return f"An error occurred while reading the file: {e}"
+            return f"An error occurred while processing the file: {e}"
     else:
         return "No file was selected. Please try again."
 

@@ -7,20 +7,36 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <style>
         table {
-            text-align: center; /* Center-align table content */
+            text-align: center;
         }
         th, td {
-            text-align: center; /* Center-align table headers and cells */
-            vertical-align: middle; /* Vertically align to the center */
+            text-align: center;
+            vertical-align: middle;
+        }
+        .chart-container {
+            display: flex;
+            justify-content: center; /* Center the chart */
+            align-items: center;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container mt-5">
         <h1 class="mb-4">Contents of {{ file_name }}</h1>
+        
+        <!-- Table -->
         <div>
             {{ table_html | safe }}
         </div>
+
+        <!-- Gantt Chart -->
+        <h2 class="mt-5">Project Timeline</h2>
+        <div class="chart-container">
+            <img src="data:image/png;base64,{{ chart_base64 }}" alt="Gantt Chart" class="img-fluid">
+        </div>
+
+        <!-- Back Button -->
         <a href="/" class="btn btn-primary mt-3">Back to Project Selection</a>
     </div>
 </body>
