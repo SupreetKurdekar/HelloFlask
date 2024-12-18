@@ -9,7 +9,7 @@ from openai import OpenAI
 from matplotlib.figure import Figure
 
 # Initialize OpenAI client
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="my key")
 # response = client.chat.completions.create(
 #      model="gpt-3.5-turbo",
 #      messages=[{"role": "user", "content": "Hello, who are you?"}]
