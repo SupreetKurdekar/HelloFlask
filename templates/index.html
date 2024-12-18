@@ -2,9 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select a Project</title>
+    <style>
+        /* Chatbox styling */
+        .chat-container {
+            max-width: 600px;
+            margin-top: 50px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        .chat-box {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #fff;
+        }
+        .chat-input {
+            display: flex;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px 0 0 5px;
+        }
+        .chat-input button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-left: 0;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
+    <!-- Project Selection -->
     <h1>Select a Project</h1>
     <form method="post" action="/process">
         <label for="project_list">Project List:</label>
@@ -15,8 +57,55 @@
         </select>
         <button type="submit">Submit</button>
     </form>
+
+    <!-- AI Chatbox Section -->
+    <div class="chat-container">
+        <h2>AI Chatbox</h2>
+        <div id="chat-box" class="chat-box"></div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Type your message here..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <!-- JavaScript for Chatbox -->
+    <script>
+        async function sendMessage() {
+            const userInput = document.getElementById("user-input");
+            const chatBox = document.getElementById("chat-box");
+
+            // Get user's message
+            const userMessage = userInput.value;
+
+            if (!userMessage) return;
+
+            // Display user message
+            chatBox.innerHTML += `<div><strong>You:</strong> ${userMessage}</div>`;
+
+            try {
+                // Send the message to the Flask backend
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: userMessage })
+                });
+
+                const data = await response.json();
+
+                // Display AI's response
+                chatBox.innerHTML += `<div><strong>AI:</strong> ${data.reply}</div>`;
+            } catch (error) {
+                chatBox.innerHTML += `<div><strong>AI:</strong> An error occurred. Please try again.</div>`;
+            }
+
+            // Clear input and scroll to bottom
+            userInput.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
 </body>
 </html>
+
 
 
 <!-- <!DOCTYPE html>

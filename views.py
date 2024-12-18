@@ -1,11 +1,20 @@
-from flask import render_template, g, Blueprint,request
+from flask import render_template, g, Blueprint,request, jsonify
 import os
 import pandas as pd
 from matplotlib.figure import Figure
 from io import BytesIO
 import base64
+from openai import OpenAI
 
 from matplotlib.figure import Figure
+
+# Initialize OpenAI client
+client = OpenAI(api_key="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")
+# response = client.chat.completions.create(
+#      model="gpt-3.5-turbo",
+#      messages=[{"role": "user", "content": "Hello, who are you?"}]
+#  )
+# print(response.choices[0].message.content)
 
 #data = pd.read_excel("Dataz\ProjectData1.xlsx")
 
@@ -82,6 +91,30 @@ def process():
             return f"An error occurred while processing the file: {e}"
     else:
         return "No file was selected. Please try again."
+
+@my_view.route("/chat", methods=["POST"])
+def chat():
+    try:
+        # Get the user's input message
+        user_message = request.json.get("message")
+
+        # Send user input to OpenAI's GPT-3.5 Turbo
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": user_message}
+            ]
+        )
+
+        # Extract AI's response
+        ai_reply = response.choices[0].message.content
+        return jsonify({"reply": ai_reply})
+
+    except Exception as e:
+        return jsonify({"reply": f"Error: {str(e)}"})
+    # print("success")
+    # return client.api_key
 
 
 # @my_view.route("/home")
