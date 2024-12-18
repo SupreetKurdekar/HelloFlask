@@ -4,19 +4,28 @@ import pandas as pd
 from matplotlib.figure import Figure
 from io import BytesIO
 import base64
-from openai import OpenAI
 
 from matplotlib.figure import Figure
 
-# Initialize OpenAI client
+from langchain_ollama import OllamaLLM
+from langchain_core.prompts import ChatPromptTemplate
 
-# response = client.chat.completions.create(
-#      model="gpt-3.5-turbo",
-#      messages=[{"role": "user", "content": "Hello, who are you?"}]
-#  )
-# print(response.choices[0].message.content)
+# Initialize the LangChain model and prompt template
+model = OllamaLLM(model="llama3.2:latest")
+template = """
+Answer the question below.
 
-#data = pd.read_excel("Dataz\ProjectData1.xlsx")
+Here is the conversation history: {context}
+
+Here is the next question: {question}
+
+Answer:
+"""
+prompt = ChatPromptTemplate.from_template(template)
+chain = prompt | model
+
+# Initialize chat context
+chat_context = ""
 
 # Specify the directory containing the Excel files
 EXCEL_DIR = "Dataz"
@@ -80,6 +89,7 @@ def process():
             # Generate table HTML
             table_html = df.to_html(classes="table table-striped table-bordered", index=False)
 
+
             return render_template(
                 "view_excel.html",
                 file_name=selected_file_name,
@@ -94,27 +104,21 @@ def process():
 
 @my_view.route("/chat", methods=["POST"])
 def chat():
-    try:
-        # Get the user's input message
-        user_message = request.json.get("message")
+    global chat_context
+    user_message = request.json.get("message", "")
+    
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
 
-        # Send user input to OpenAI's GPT-3.5 Turbo
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": user_message}
-            ]
-        )
+    # Invoke the LangChain model
+    response = chain.invoke({"context": chat_context, "question": user_message})
+    bot_reply = str(response)
 
-        # Extract AI's response
-        ai_reply = response.choices[0].message.content
-        return jsonify({"reply": ai_reply})
+    # Update context
+    chat_context += f"\nUser: {user_message}\nAI: {bot_reply}"
 
-    except Exception as e:
-        return jsonify({"reply": f"Error: {str(e)}"})
-    # print("success")
-    # return client.api_key
+    return jsonify({"reply": bot_reply})
+
 
 
 # @my_view.route("/home")
