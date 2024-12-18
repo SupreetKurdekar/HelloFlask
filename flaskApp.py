@@ -1,6 +1,6 @@
 from flask import Flask
 import os
-import openai
+
 from views import my_view
 
 
