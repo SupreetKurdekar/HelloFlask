@@ -1,11 +1,9 @@
-from flask import render_template, g, Blueprint,request, jsonify
+from flask import render_template, Blueprint, request, jsonify
 import os
 import pandas as pd
 from matplotlib.figure import Figure
 from io import BytesIO
 import base64
-
-from matplotlib.figure import Figure
 
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
@@ -30,7 +28,7 @@ chat_context = ""
 # Specify the directory containing the Excel files
 EXCEL_DIR = "Dataz"
 
-my_view = Blueprint(__name__,'my_view')
+my_view = Blueprint(__name__, 'my_view')
 
 @my_view.route("/")
 def index():
@@ -89,7 +87,6 @@ def process():
             # Generate table HTML
             table_html = df.to_html(classes="table table-striped table-bordered", index=False)
 
-
             return render_template(
                 "view_excel.html",
                 file_name=selected_file_name,
@@ -118,6 +115,7 @@ def chat():
     chat_context += f"\nUser: {user_message}\nAI: {bot_reply}"
 
     return jsonify({"reply": bot_reply})
+
 
 
 
