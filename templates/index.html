@@ -7,15 +7,41 @@
     <style>
         /* Chatbox styling */
         .chat-container {
-            max-width: 600px;
-            margin-top: 50px;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            max-width: 300px;
+            width: 100%;
             border: 1px solid #ccc;
             padding: 10px;
             border-radius: 10px;
             background-color: #f9f9f9;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none; /* Initially hidden */
+        }
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .chat-header h2 {
+            margin: 0;
+            font-size: 16px;
+        }
+        .close-chat {
+            background: none;
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            color: #DC3545;
+            cursor: pointer;
+        }
+        .close-chat:hover {
+            color: #A71D2A;
         }
         .chat-box {
-            height: 300px;
+            height: 200px;
             overflow-y: auto;
             border: 1px solid #ddd;
             padding: 10px;
@@ -43,6 +69,24 @@
         .chat-input button:hover {
             background-color: #0056b3;
         }
+        .chat-toggle-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            font-size: 18px;
+            text-align: center;
+        }
+        .chat-toggle-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -59,8 +103,11 @@
     </form>
 
     <!-- AI Chatbox Section -->
-    <div class="chat-container">
-        <h2>AI Chatbox</h2>
+    <div id="chat-container" class="chat-container">
+        <div class="chat-header">
+            <h2>AI Chatbox</h2>
+            <button class="close-chat" onclick="closeChat()">✖</button>
+        </div>
         <div id="chat-box" class="chat-box"></div>
         <div class="chat-input">
             <input type="text" id="user-input" placeholder="Type your message here..." />
@@ -68,8 +115,29 @@
         </div>
     </div>
 
+    <!-- Toggle Chat Button -->
+    <button id="chat-toggle" class="chat-toggle-button" onclick="openChat()">💬</button>
+
     <!-- JavaScript for Chatbox -->
     <script>
+        function openChat() {
+            const chatContainer = document.getElementById("chat-container");
+            const chatToggle = document.getElementById("chat-toggle");
+
+            chatContainer.style.display = "block"; // Show chatbox
+            chatToggle.style.display = "none";    // Hide toggle button
+        }
+
+        function closeChat() {
+            const chatContainer = document.getElementById("chat-container");
+            const chatToggle = document.getElementById("chat-toggle");
+            const chatBox = document.getElementById("chat-box");
+
+            chatContainer.style.display = "none"; // Hide chatbox
+            chatToggle.style.display = "block";  // Show toggle button
+            chatBox.innerHTML = "";              // Clear chat messages
+        }
+
         async function sendMessage() {
             const userInput = document.getElementById("user-input");
             const chatBox = document.getElementById("chat-box");
@@ -102,9 +170,19 @@
             userInput.value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
         }
+
+        // Allow the user to send the message by pressing "Enter"
+        document.getElementById("user-input").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();  // Prevent form submission (if applicable)
+                sendMessage();
+            }
+        });
     </script>
 </body>
 </html>
+
+
 
 
 
