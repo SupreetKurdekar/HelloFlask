@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.register_blueprint(my_view)
 
 # Constants
-UPLOAD_FOLDER = './uploads'
+UPLOAD_FOLDER = './PDFDatabase'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 

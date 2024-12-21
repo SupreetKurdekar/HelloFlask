@@ -25,35 +25,34 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 warnings.filterwarnings("ignore")
 load_dotenv()
 
-# Initialize embeddings and vector store
+model = ChatOllama(model="llama3.2:latest", base_url="http://localhost:11434")
+
 embeddings = OllamaEmbeddings(model='nomic-embed-text', base_url="http://localhost:11434")
-model = ChatOllama(model="llama3.2:1b", base_url="http://localhost:11434")
 
-# Initialize FAISS index
-single_vector = embeddings.embed_query("dummy text for initialization")
-index = faiss.IndexFlatL2(len(single_vector))
-vector_store = FAISS(
-    embedding_function=embeddings,
-    index=index,
-    docstore=InMemoryDocstore(),
-    index_to_docstore_id={}
-)
-
-# Text splitter
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+# load vector store from file
+vector_store = FAISS.load_local("VectorStores\health_supplements", embeddings=embeddings, allow_dangerous_deserialization=True)
+retriever = vector_store.as_retriever(search_type="mmr", search_kwargs = {'k': 3, 'fetch_k': 100,'lambda_mult': 1})
 
 # Load prompt
 prompt = """
     You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question.
     If you don't know the answer, just say that you don't know.
-    Answer in bullet points. Make sure your answer is relevant to the question and it is answered from the context only.
+    Make sure your answer is relevant to the question and it is answered from the context only.
     Question: {question} 
     Context: {context} 
     Answer:
 """
 prompt_template = ChatPromptTemplate.from_template(prompt)
 
+def format_docs(docs):
+    return "\n\n".join([doc.page_content for doc in docs])
 
+rag_chain = (
+    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    | prompt_template
+    | model
+    | StrOutputParser()
+)
 # # Initialize the LangChain model and prompt template
 # model = OllamaLLM(model="llama3.2:latest")
 # template = """
@@ -156,41 +155,26 @@ def upload_pdf():
     file_path = os.path.join(my_view.config['UPLOAD_FOLDER'], file.filename)
     file.save(file_path)
 
-    # Load and chunk PDF content
-    loader = PyMuPDFLoader(file_path)
-    docs = loader.load()
-    print(docs)
-    chunks = text_splitter.split_documents(docs)
-    vector_store.add_documents(documents=chunks)
+
 
     return jsonify({"message": "PDF uploaded and processed successfully", "chunks_count": len(chunks)})
 
 @my_view.route('/chat', methods=['POST'])
 def ask_question():
     """Handles question answering using RAG."""
-    data = request.json
-    question = data.get('question', '')
-
+    print("chat called")
+    # global rag_chain
+    
+    question = request.json.get("question","")
+    # print(question)
     if not question:
         return jsonify({"error": "Question is required"}), 400
-
-    retriever = vector_store.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 100, 'lambda_mult': 1})
-    docs = retriever.invoke(question)
     
-    def format_docs(docs):
-        return "\n\n".join([doc.page_content for doc in docs])
-
-    rag_chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt_template
-        | model
-        | StrOutputParser()
-    )
-
     # Generate response
-    output = rag_chain.invoke(question)
-    return jsonify({"question": question, "answer": output})
-
+    # output = rag_chain.invoke(question)
+    # print(output)
+    output = "this is a def output"
+    return jsonify({"answer": output})
 
 # @my_view.route("/chat", methods=["POST"])
 # def chat():
@@ -208,37 +192,3 @@ def ask_question():
 #     chat_context += f"\nUser: {user_message}\nAI: {bot_reply}"
 
 #     return jsonify({"reply": bot_reply})
-
-
-
-
-# @my_view.route("/home")
-# def hello():
-#   return "hello"
-
-# @my_view.route("/")
-# def displayHomePage():
-
-#   data["Days"] = data['End date'] - data['Start date']
-
-#   fig = Figure()
-#   ax = fig.add_subplot()
-
-#   ax.barh(y=data['Project Name'],left=data['Start date'],width=data['Days'])
-
-#   buf = BytesIO()
-#   fig.savefig(buf, format="png")
-# # Embed the result in the html output.
-#   tempData = base64.b64encode(buf.getbuffer()).decode("ascii")
-#   return f"<img src='data:image/png;base64,{tempData}'/>"
-
-# @my_view.route('/dropdown', methods=['GET', 'POST'])
-# def dropdown():
-#     selected_option = None
-#     if request.method == 'POST':
-#         # Get the selected option from the form
-#         selected_option = request.form.get('dropdown', 'No option selected')
-#         projectManager = data.loc[data['Project Name']==selected_option,'Project manager'].item()
-#         return f"You selected: {projectManager}"
-
-#     return render_template('index.html')
