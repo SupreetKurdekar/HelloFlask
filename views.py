@@ -67,8 +67,8 @@ rag_chain = (
 # prompt = ChatPromptTemplate.from_template(template)
 # chain = prompt | model
 
-# # Initialize chat context
-# chat_context = ""
+# Initialize chat context
+chat_context = ""
 
 
 # Specify the directory containing the Excel files
@@ -157,24 +157,36 @@ def upload_pdf():
 
 
 
-    return jsonify({"message": "PDF uploaded and processed successfully", "chunks_count": len(chunks)})
+    return jsonify({"message": "PDF uploaded and processed successfully", "chunks_count":1})
 
 @my_view.route('/chat', methods=['POST'])
-def ask_question():
+def chat():
     """Handles question answering using RAG."""
-    print("chat called")
-    # global rag_chain
+    global chat_context  # Use global chat_context to preserve conversation context
     
-    question = request.json.get("question","")
-    # print(question)
-    if not question:
-        return jsonify({"error": "Question is required"}), 400
+    print("Chat endpoint called.")
+     
+    user_message = request.json.get("message","")
+
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
     
-    # Generate response
-    # output = rag_chain.invoke(question)
-    # print(output)
-    output = "this is a def output"
-    return jsonify({"answer": output})
+    # Check dependencies
+    if 'retriever' not in globals() or 'format_docs' not in globals() or 'prompt' not in globals():
+        return jsonify({"error": "Internal server error: Required components are missing."}), 500
+
+    try:
+        # Invoke the LangChain model
+        output = rag_chain.invoke(user_message)
+        bot_reply = str(output)
+    except Exception as e:
+        return jsonify({"error": "Error while processing request.", "details": str(e)}), 500
+
+    # Update chat context
+    chat_context += f"\nUser: {user_message}\nAI: {bot_reply}"
+
+    # Return response
+    return jsonify({"reply": bot_reply})
 
 # @my_view.route("/chat", methods=["POST"])
 # def chat():
