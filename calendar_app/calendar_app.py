@@ -5,7 +5,7 @@ import os
 
 calendarApp = Flask(__name__)
 
-# Read and combine Excel sheets
+# Read and combine Excel sheets of various calendars
 def get_combined_data():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     files = {
