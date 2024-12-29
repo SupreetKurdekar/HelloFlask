@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}My Project{% endblock %}</title>
     <style>
-        /* Include your existing styles for the chatbox here */
+        /* Existing styles for the chatbox */
 
         .chat-container {
             position: fixed;
@@ -83,68 +83,97 @@
         .chat-toggle-button:hover {
             background-color: #0056b3;
         }
+
+        .pdf-chat-toggle-button {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            font-size: 18px;
+            text-align: center;
+        }
+        .pdf-chat-toggle-button:hover {
+            background-color: #1e7e34;
+        }
     </style>
 </head>
 <body>
-    <!-- Common Header Section (if any) -->
     {% block header %}
     <h1>Welcome to My Project</h1>
     {% endblock %}
-    
-    <!-- Content for the page -->
+
     {% block content %}
     {% endblock %}
 
-    <!-- Chatbox Section (this will be on every page) -->
+    <!-- General Chatbox -->
     <div id="chat-container" class="chat-container">
         <div class="chat-header">
             <h2>AI Chatbox</h2>
-            <button class="close-chat" onclick="closeChat()">✖</button>
+            <button class="close-chat" onclick="closeChat('chat-container', 'chat-toggle')">✖</button>
         </div>
         <div id="chat-box" class="chat-box"></div>
         <div class="chat-input">
             <input type="text" id="user-input" placeholder="Type your message here..." />
-            <button onclick="sendMessage()">Send</button>
+            <button onclick="sendMessage('/chat', 'chat-box', 'user-input')">Send</button>
         </div>
     </div>
 
-    <button id="chat-toggle" class="chat-toggle-button" onclick="openChat()">💬</button>
+    <!-- PDF Chatbox -->
+    <div id="pdf-chat-container" class="chat-container">
+        <div class="chat-header">
+            <h2>PDF Chatbox</h2>
+            <button class="close-chat" onclick="closeChat('pdf-chat-container', 'pdf-chat-toggle')">✖</button>
+        </div>
+        <div id="pdf-chat-box" class="chat-box"></div>
+        <div class="chat-input">
+            <input type="text" id="pdf-user-input" placeholder="Type your message here..." />
+            <button onclick="sendMessage('/pdfChat', 'pdf-chat-box', 'pdf-user-input')">Send</button>
+        </div>
+    </div>
 
-    <!-- JavaScript for Chatbox -->
+    <!-- Toggle Buttons -->
+    <button id="chat-toggle" class="chat-toggle-button" onclick="openChat('chat-container', 'chat-toggle')">💬</button>
+    <button id="pdf-chat-toggle" class="pdf-chat-toggle-button" onclick="openChat('pdf-chat-container', 'pdf-chat-toggle')">📄</button>
+
+    <!-- JavaScript for Chatboxes -->
     <script>
-        function openChat() {
-            const chatContainer = document.getElementById("chat-container");
-            const chatToggle = document.getElementById("chat-toggle");
+        function openChat(containerId, toggleId) {
+            const chatContainer = document.getElementById(containerId);
+            const chatToggle = document.getElementById(toggleId);
 
-            chatContainer.style.display = "block"; // Show chatbox
-            chatToggle.style.display = "none";    // Hide toggle button
+            chatContainer.style.display = "block";
+            chatToggle.style.display = "none";
         }
 
-        function closeChat() {
-            const chatContainer = document.getElementById("chat-container");
-            const chatToggle = document.getElementById("chat-toggle");
-            const chatBox = document.getElementById("chat-box");
+        function closeChat(containerId, toggleId) {
+            const chatContainer = document.getElementById(containerId);
+            const chatToggle = document.getElementById(toggleId);
+            const chatBox = chatContainer.querySelector(".chat-box");
 
-            chatContainer.style.display = "none"; // Hide chatbox
-            chatToggle.style.display = "block";  // Show toggle button
-            chatBox.innerHTML = "";              // Clear chat messages
+            chatContainer.style.display = "none";
+            chatToggle.style.display = "block";
+            chatBox.innerHTML = "";
         }
 
-        async function sendMessage() {
-            const userInput = document.getElementById("user-input");
-            const chatBox = document.getElementById("chat-box");
+        async function sendMessage(endpoint, chatBoxId, userInputId) {
+            const userInput = document.getElementById(userInputId);
+            const chatBox = document.getElementById(chatBoxId);
 
-            // Get user's message
             const userMessage = userInput.value;
 
             if (!userMessage) return;
 
-            // Display user message
             chatBox.innerHTML += `<div><strong>You:</strong> ${userMessage}</div>`;
 
             try {
-                // Send the message to the Flask backend
-                const response = await fetch("/chat", {
+                const response = await fetch(endpoint, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ message: userMessage })
@@ -152,22 +181,26 @@
 
                 const data = await response.json();
 
-                // Display AI's response
                 chatBox.innerHTML += `<div><strong>AI:</strong> ${data.reply}</div>`;
             } catch (error) {
                 chatBox.innerHTML += `<div><strong>AI:</strong> An error occurred. Please try again.</div>`;
             }
 
-            // Clear input and scroll to bottom
             userInput.value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // Allow the user to send the message by pressing "Enter"
         document.getElementById("user-input").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
-                event.preventDefault();  // Prevent form submission (if applicable)
-                sendMessage();
+                event.preventDefault();
+                sendMessage('/chat', 'chat-box', 'user-input');
+            }
+        });
+
+        document.getElementById("pdf-user-input").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendMessage('/pdfChat', 'pdf-chat-box', 'pdf-user-input');
             }
         });
     </script>
