@@ -7,10 +7,38 @@ import base64
 
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
+import warnings
+from dotenv import load_dotenv
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_ollama import OllamaEmbeddings, ChatOllama
+from langchain_community.vectorstores import FAISS
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate
+from langchain import hub
+from langchain_community.docstore.in_memory import InMemoryDocstore
+import faiss
 
-# Initialize the LangChain model and prompt template
-model = OllamaLLM(model="llama3.2:latest")
-template = """
+# Load environment variables
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+warnings.filterwarnings("ignore")
+load_dotenv()
+
+# Initialize models
+model = ChatOllama(model="llama3.2:latest", base_url="http://localhost:11434")
+embeddings = OllamaEmbeddings(model='nomic-embed-text', base_url="http://localhost:11434")
+
+def format_docs(docs):
+    """Helper function to format documents into a string."""
+    return "\n\n".join([doc.page_content for doc in docs])
+
+# Load vector store from file
+vector_store = FAISS.load_local("VectorStores\health_supplements", embeddings=embeddings, allow_dangerous_deserialization=True)
+retriever = vector_store.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 100, 'lambda_mult': 1})
+
+# Load prompt for regular chatbot
+regular_prompt = """
 Answer the question below.
 
 Here is the conversation history: {context}
@@ -19,11 +47,35 @@ Here is the next question: {question}
 
 Answer:
 """
-prompt = ChatPromptTemplate.from_template(template)
-chain = prompt | model
+regular_prompt_template = ChatPromptTemplate.from_template(regular_prompt)
 
-# Initialize chat context
-chat_context = ""
+# Initialize LangChain chains for regular chat
+regular_rag_chain = regular_prompt_template | model | StrOutputParser()
+
+# Load prompt for PDF chatbot (similar to the regular one)
+pdf_prompt = """
+    You are an assistant for question-answering tasks based on a PDF document. Use the following pieces of retrieved context to answer the question.
+    If you don't know the answer, just say that you don't know.
+    Make sure your answer is relevant to the question and it is answered from the context only.
+    Question: {question} 
+    Context: {context} 
+    Answer:
+"""
+
+pdf_prompt_template = ChatPromptTemplate.from_template(pdf_prompt)
+
+# Initialize the PDF-specific RAG chain
+pdf_rag_chain = (
+    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    | pdf_prompt_template
+    | model
+    | StrOutputParser()
+)
+
+# Initialize chat context for regular chatbot and PDF chatbot
+regular_chat_context = ""
+pdf_chat_context = ""
+
 
 # Specify the directory containing the Excel files
 EXCEL_DIR = "Dataz"
@@ -99,53 +151,63 @@ def process():
     else:
         return "No file was selected. Please try again."
 
+@my_view.route('/upload', methods=['POST'])
+def upload_pdf():
+    """Handles PDF upload and document processing."""
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files['file']
+    file_path = os.path.join(my_view.config['UPLOAD_FOLDER'], file.filename)
+    file.save(file_path)
+
+    return jsonify({"message": "PDF uploaded and processed successfully", "chunks_count": 1})
+
+@my_view.route('/pdfChat', methods=['POST'])
+def pdf_chat():
+    """Handles question answering using RAG for PDF-based chat."""
+    global pdf_chat_context  # Use global pdf_chat_context to preserve PDF conversation context
+
+    user_message = request.json.get("message", "")
+    
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
+    
+    # Use the pdf_rag_chain for PDF-based conversation
+    try:
+        output = pdf_rag_chain.invoke(user_message)
+        bot_reply = str(output)
+    except Exception as e:
+        return jsonify({"error": "Error while processing request.", "details": str(e)}), 500
+
+    # Update PDF chat context
+    pdf_chat_context += f"\nUser: {user_message}\nAI: {bot_reply}"
+
+    # Return response for PDF chatbot
+    return jsonify({"reply": bot_reply})
+
 @my_view.route("/chat", methods=["POST"])
-def chat():
-    global chat_context
+def regular_chat():
+    """Handles question answering using RAG for regular chatbot."""
+    global regular_chat_context  # Use global regular_chat_context to preserve regular conversation context
+
     user_message = request.json.get("message", "")
     
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
 
-    # Invoke the LangChain model
-    response = chain.invoke({"context": chat_context, "question": user_message})
-    bot_reply = str(response)
+    try:
+        # Use the regular_rag_chain for regular conversation
+        response = regular_rag_chain.invoke({"context": regular_chat_context, "question": user_message})
+        
+        # Extract only the 'content' from the response
+        bot_reply = response.get("content", "") if isinstance(response, dict) else str(response)
 
-    # Update context
-    chat_context += f"\nUser: {user_message}\nAI: {bot_reply}"
+    except Exception as e:
+        return jsonify({"error": "Error while processing request.", "details": str(e)}), 500
+
+    # Update context for regular chatbot
+    regular_chat_context += f"\nUser: {user_message}\nAI: {bot_reply}"
 
     return jsonify({"reply": bot_reply})
 
-
-
-
-# @my_view.route("/home")
-# def hello():
-#   return "hello"
-
-# @my_view.route("/")
-# def displayHomePage():
-
-#   data["Days"] = data['End date'] - data['Start date']
-
-#   fig = Figure()
-#   ax = fig.add_subplot()
-
-#   ax.barh(y=data['Project Name'],left=data['Start date'],width=data['Days'])
-
-#   buf = BytesIO()
-#   fig.savefig(buf, format="png")
-# # Embed the result in the html output.
-#   tempData = base64.b64encode(buf.getbuffer()).decode("ascii")
-#   return f"<img src='data:image/png;base64,{tempData}'/>"
-
-# @my_view.route('/dropdown', methods=['GET', 'POST'])
-# def dropdown():
-#     selected_option = None
-#     if request.method == 'POST':
-#         # Get the selected option from the form
-#         selected_option = request.form.get('dropdown', 'No option selected')
-#         projectManager = data.loc[data['Project Name']==selected_option,'Project manager'].item()
-#         return f"You selected: {projectManager}"
-
-#     return render_template('index.html')
